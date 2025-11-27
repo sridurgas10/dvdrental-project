@@ -1,11 +1,12 @@
 
- 3. PostgreSQL Views
+ 
+ 3. postgresql views
 
 customer_rental_history_view — shows each customer’s total rentals and payments.
 
-Endpoints:
-GET /reports/customer-history/
-GET /reports/film-availability/
+endpoints:
+get /reports/customer-history/
+get /reports/film-availability/
 
 
 select *from customer c 
@@ -45,12 +46,8 @@ select *from film_availability
 --------------------------------------------------------------------------------------
 select *from staff 
 
-calculate_total_rental_cost(customer_id INT)
 
-
-
---function(1):
-create or replace function calculate_total_rental_cost(customer_id int)
+create or replace function calculate_total_rental_cost(p_customer_id int)
 returns float
 language plpgsql
 as $$
@@ -58,12 +55,14 @@ declare
     rental_cost float;
 begin
     select sum(amount) into rental_cost from payment p
-    where p.customer_id = customer_id;
+    where p.customer_id = p_customer_id
+    group by p.customer_id;
+
     return rental_cost;
 end;
 $$;
 
-SELECT calculate_total_rental_cost(5)
+select calculate_total_rental_cost(348)
 
 select*from payment
 
@@ -72,17 +71,17 @@ select*from category
 
 select*from customer
 
---function (2)get_overdue_rentals(days INT) → Returns rentals not returned within given days.
---get_overdue_rentals(days INT)
+--function (2)get_overdue_rentals(days int) → returns rentals not returned within given days.
+--get_overdue_rentals(days int)
 
-CREATE OR REPLACE FUNCTION get_overdue_rentals(days INT)
-RETURNS SETOF rental
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT *FROM rental WHERE return_date IS NULL AND rental_date < NOW() - make_interval(days);
-END;
+create or replace function get_overdue_rentals(days int)
+returns setof rental
+language plpgsql
+as $$
+begin
+    return query
+    select *from rental where return_date is null and rental_date < now() - make_interval(days);
+end;
 $$;
 
 
@@ -93,7 +92,7 @@ select*from rental
 
 
 ---------------------------------------------------------------
--- Function to update inventory when a rental is returned
+-- function to update inventory when a rental is returned
 create or replace function update_inventory_on_return()
 returns trigger 
 language plpgsql
@@ -168,7 +167,7 @@ values (1,6,4,103, 100.00, now());
 select * from payment_audit_table;
 ------------------------------------------------------------------------------------------
 
---GET /reports/top-customers/Top 5 customers by payment volume.
+--get /reports/top-customers/top 5 customers by payment volume.
 create or replace view top5_customer
 as
 select c.customer_id,c.first_name,c.last_name,sum(p.amount) as total_amount from customer c 
@@ -180,7 +179,7 @@ select *from top5_customer
 
 
 
---Most rented films in the last 30 days.GET /reports/top-films/
+--most rented films in the last 30 days.get /reports/top-films/
 
 
 create or replace view  top10_films 
@@ -195,15 +194,12 @@ limit 10
 select *from  top10_films 
 
 
---Staff performance (number of rentals processed).GET /reports/staff-performance/
+--staff performance (number of rentals processed).get /reports/staff-performance/
 
-create or replace view staff_performance_view
+create or replace view staff_perform
 as
-select staff_id,count(r.rental_id) as totoal_rentals from rental r
+select staff_id,count(r.rental_id) as total_rentals from rental r
 group by staff_id order by count(r.rental_id) desc
 
 
-select *from staff_performance_view
-
-
---------------------------------------------------------------------------------------------------
+select *from staff_perform
